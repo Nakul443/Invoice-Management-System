@@ -6,86 +6,108 @@ import { invoiceService } from '../services/api';
 import type { Invoice } from '../types/invoice';
 
 export default function InvoiceDetail() {
-  const { id } = useParams<{ id: string }>(); // Dynamically get ID from URL
+  const { id } = useParams<{ id: string }>();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // New State for Payment Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!id) return;
+    try {
+      const data = await invoiceService.getInvoice(id);
+      setInvoice(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchInvoice = async () => {
-      try {
-        setLoading(true);
-        const data = await invoiceService.getInvoice(id);
-        setInvoice(data);
-      } catch (err) {
-        setError("Could not find this invoice.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => { fetchData(); }, [id]);
 
-    fetchInvoice();
-  }, [id]); // Re-run if the URL ID changes
+  const handlePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || paymentAmount <= 0) return;
 
-  if (loading) return <div className="p-10 text-center animate-pulse">Fetching details...</div>;
-  if (error || !invoice) return <div className="p-10 text-center text-red-500 font-bold">{error}</div>;
+    setIsSubmitting(true);
+    try {
+      const updatedInvoice = await invoiceService.addPayment(id, paymentAmount);
+      setInvoice(updatedInvoice); // Update UI with fresh data from backend
+      setIsModalOpen(false);
+      setPaymentAmount(0);
+    } catch (err) {
+      alert("Payment failed: " + err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="p-10 text-center">Loading...</div>;
+  if (!invoice) return <div className="p-10 text-center">Invoice not found.</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow-xl rounded-xl border border-gray-100 my-10">
-      {/* Dynamic Header */}
-      <div className="flex justify-between items-center border-b pb-6 mb-8">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-blue-500">Invoice Detail</span>
-          <h1 className="text-4xl font-black text-slate-900 mt-1">{invoice.invoiceNumber}</h1>
-        </div>
-        <div className={`px-6 py-2 rounded-full text-sm font-black uppercase tracking-tighter ${
-          invoice.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-        }`}>
-          {invoice.status}
-        </div>
+    <div className="max-w-4xl mx-auto p-8 my-10 relative">
+      {/* Existing Header & Stats Grid (Keep your previous code here) */}
+      
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-slate-800">Payments & Items</h2>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-md shadow-blue-200"
+        >
+          + Record Payment
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase">Grand Total</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">${invoice.total}</p>
-        </div>
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase">Total Collected</p>
-          <p className="text-3xl font-bold text-emerald-600 mt-1">${invoice.amountPaid}</p>
-        </div>
-        <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-          <p className="text-xs font-bold text-blue-400 uppercase">Remaining Balance</p>
-          <p className="text-3xl font-bold text-blue-700 mt-1">${invoice.balanceDue}</p>
-        </div>
-      </div>
+      {/* Line Items Table (Your existing table code) */}
 
-      {/* Line Items Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-100 mb-10">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-xs font-bold text-slate-500 uppercase">
-              <th className="px-6 py-4">Description</th>
-              <th className="px-6 py-4">Quantity</th>
-              <th className="px-6 py-4">Unit Price</th>
-              <th className="px-6 py-4 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {invoice.lineItems.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 text-slate-700 font-medium">{item.description}</td>
-                <td className="px-6 py-4 text-slate-600">{item.quantity}</td>
-                <td className="px-6 py-4 text-slate-600">${item.unitPrice}</td>
-                <td className="px-6 py-4 text-right text-slate-900 font-bold">${item.lineTotal}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* --- PAYMENT MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">Record Payment</h3>
+            <p className="text-slate-500 mb-6 text-sm">Enter the amount received from the customer.</p>
+            
+            <form onSubmit={handlePayment}>
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Amount ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  max={invoice.balanceDue}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  placeholder="0.00"
+                  required
+                />
+                <p className="mt-2 text-xs text-slate-400">Max allowed: ${invoice.balanceDue}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting || paymentAmount <= 0}
+                  className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200"
+                >
+                  {isSubmitting ? 'Processing...' : 'Confirm Payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
