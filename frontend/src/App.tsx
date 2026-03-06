@@ -1,3 +1,6 @@
+// decides which page to show based on the url
+// eg: /invoice/1 shows invoice with id 1
+
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'

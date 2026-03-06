@@ -1,4 +1,7 @@
 // a way for react to talk to the backend (express server)
+// centralizes all fetch calls
+// basically the postman
+// if the backend URL changes, we only need to change it here, not in every component that calls the backend
 
 import type { Invoice } from '../types/invoice.js';
 
