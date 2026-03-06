@@ -14,6 +14,6 @@ router.get('/:id', getInvoiceById);
 router.post('/:id/payments', addPayment);
 
 // 3 & 4. Archive/Restore Invoice
-router.patch('/:id/archive', toggleArchive);
+router.post('/:id/archive', toggleArchive);
 
 export default router;

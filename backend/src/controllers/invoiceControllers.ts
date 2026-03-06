@@ -1,3 +1,6 @@
+// this file contains the logic for invoice related endpoints
+// routes makes the call to these functions
+
 import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
@@ -71,18 +74,19 @@ export const addPayment = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// 3 & 4. Archive/Restore
+// 3 & 4. Archive & Restore Invoice
 export const toggleArchive = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { isArchived } = req.body;
+    const { isArchived } = req.body; // Expecting { "isArchived": true } or false
 
     const updated = await prisma.invoice.update({
       where: { id: Number(id) },
-      data: { isArchived }
+      data: { isArchived: Boolean(isArchived) }
     });
+
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: 'Archive toggle failed' });
+    res.status(500).json({ error: 'Failed to update archive status' });
   }
 };
