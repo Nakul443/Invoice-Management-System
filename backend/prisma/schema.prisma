@@ -1,12 +1,8 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -15,36 +11,36 @@ datasource db {
 }
 
 model Invoice {
-  id            Int           @id @default(autoincrement()) [cite: 20]
-  invoiceNumber String        [cite: 21]
-  customerName  String        [cite: 22]
-  issueDate     DateTime      [cite: 23]
-  dueDate       DateTime      [cite: 24]
-  status        Status        @default(DRAFT) [cite: 25]
-  total         Float         @default(0) [cite: 27]
-  amountPaid    Float         @default(0) [cite: 28]
-  balanceDue    Float         @default(0) [cite: 29]
-  isArchived    Boolean       @default(false) [cite: 30]
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String       
+  customerName  String       
+  issueDate     DateTime     
+  dueDate       DateTime     
+  status        Status        @default(DRAFT)
+  total         Float         @default(0)
+  amountPaid    Float         @default(0)
+  balanceDue    Float         @default(0)
+  isArchived    Boolean       @default(false)
   lineItems     InvoiceLine[]
   payments      Payment[]
 }
 
 model InvoiceLine {
-  id          Int      @id @default(autoincrement()) [cite: 32]
-  invoiceId   Int      [cite: 33]
+  id          Int      @id @default(autoincrement())
+  invoiceId   Int     
   invoice     Invoice  @relation(fields: [invoiceId], references: [id])
-  description String   [cite: 34]
-  quantity    Int      [cite: 35]
-  unitPrice   Float    [cite: 36]
-  lineTotal   Float    [cite: 37] // Business Rule: quantity * unitPrice [cite: 38]
+  description String  
+  quantity    Int     
+  unitPrice   Float   
+  lineTotal   Float    
 }
 
 model Payment {
-  id          Int      @id @default(autoincrement()) [cite: 41]
-  invoiceId   Int      [cite: 42]
+  id          Int      @id @default(autoincrement())
+  invoiceId   Int     
   invoice     Invoice  @relation(fields: [invoiceId], references: [id])
-  amount      Float    [cite: 43]
-  paymentDate DateTime @default(now()) [cite: 44]
+  amount      Float   
+  paymentDate DateTime @default(now())
 }
 
 enum Status {
