@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import InvoiceDetail from './pages/InvoiceDetail';
 import Login from './pages/Login';
 import type { JSX } from 'react/jsx-runtime';
+import Register from './pages/Register';
 
 // A simple wrapper to protect routes
 // checks local storage for JWT
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         {/* Public Route */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Protected Route - Only accessible if logged in */}
         <Route 
