@@ -23,7 +23,7 @@ model Invoice {
   invoiceNumber String        @unique
   customerName  String       
   issueDate     DateTime     
-  dueDate       DateTime     
+  dueDate       DateTime
   status        Status        @default(DRAFT)
   total         Float         @default(0)
   amountPaid    Float         @default(0)
@@ -31,8 +31,9 @@ model Invoice {
   isArchived    Boolean       @default(false)
   lineItems     InvoiceLine[]
   payments      Payment[]
+  taxRate       Float         @default(0.10) // New field with 10% default
   userId        Int?
-  user          User?          @relation(fields: [userId], references: id)
+  user          User?         @relation(fields: [userId], references: id)
 }
 
 model InvoiceLine {

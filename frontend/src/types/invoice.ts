@@ -1,8 +1,3 @@
-// we are defining the types
-// the frontend should know exactly what an invoice looks like, what properties it has, and what types those properties are
-// It defines the "shape" of our data
-// so TypeScript can warn us if we try to use a property that doesn't exist (like invoice.price instead of invoice.total
-
 export interface LineItem {
   id: number;
   invoiceId: number;
@@ -20,6 +15,7 @@ export interface Payment {
 }
 
 export interface Invoice {
+  // Removed [x: string]: number; 
   id: number;
   invoiceNumber: string;
   customerName: string;
@@ -32,4 +28,5 @@ export interface Invoice {
   isArchived: boolean;
   lineItems: LineItem[];
   payments: Payment[];
+  taxRate: number; // New field for tax rate
 }

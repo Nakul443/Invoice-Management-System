@@ -1,40 +1,62 @@
 // decides which page to show based on the url
 // eg: /invoice/1 shows invoice with id 1
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import InvoiceDetail from './pages/InvoiceDetail';
-import Login from './pages/Login';
-import type { JSX } from 'react/jsx-runtime';
-import Register from './pages/Register';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import InvoiceDetail from "./pages/InvoiceDetail";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import type { JSX } from "react/jsx-runtime";
+import Dashboard from "./pages/Dashboard";
 
-// A simple wrapper to protect routes
-// checks local storage for JWT
-// if it's missing, the user is redirected to the login page
+// PROTECTED: No token? Go to login.
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? children : <Navigate to="/login" replace />;
+};
+
+// PUBLIC: Already logged in? Go to dashboard.
+const PublicRoute = ({ children }: { children: JSX.Element }) => {
+  const token = localStorage.getItem("token");
+  return token ? <Navigate to="/dashboard" replace /> : children;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Route */}
-        <Route path="/login" element={<Login />} />
+        {/* 1. Root forces the URL to /register */}
+        <Route path="/" element={<Navigate to="/register" replace />} />
+
+        {/* 2. REMOVED PublicRoute from Register */}
+        {/* Now, even if you are logged in, this page WILL show */}
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Route - Only accessible if logged in */}
+        {/* 3. KEEP PublicRoute for Login (optional, but standard) */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+
+        {/* 4. Dashboard (Protected) */}
         <Route 
-          path="/invoice/:id" 
+          path="/dashboard" 
           element={
             <PrivateRoute>
-              <InvoiceDetail />
+              <Dashboard />
             </PrivateRoute>
           } 
         />
 
-        {/* Default redirect (e.g., go to a specific invoice or dashboard) */}
-        <Route path="/" element={<Navigate to="/invoice/1" />} />
+        {/* ... other routes */}
       </Routes>
     </Router>
   );

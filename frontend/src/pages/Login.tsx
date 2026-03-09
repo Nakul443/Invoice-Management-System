@@ -1,7 +1,7 @@
 // login page with form, error handling, and API call to authenticate user
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
 
 export default function Login() {
@@ -10,12 +10,20 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(''); // Clear errors on new attempt
     try {
       const data = await authService.login(email, password);
-      localStorage.setItem('token', data.token); // Save the "entry ticket"
-      navigate('/'); // Go to dashboard/home
+      
+      // 1. Save the token
+      localStorage.setItem('token', data.token); 
+      
+      // 2. Save the name (to match your backend's "userName" key)
+      localStorage.setItem('userName', data.userName); 
+
+      // 3. Go straight to dashboard (Not "/" which redirects back to register)
+      navigate('/dashboard'); 
     } catch (err) {
       setError('Invalid email or password');
     }
@@ -44,6 +52,9 @@ export default function Login() {
               className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
               placeholder="name@company.com"
             />
+            <p className="text-center mt-8 text-sm text-slate-500 font-medium">
+            Don't have an account? <Link to="/register" className="text-indigo-600 font-bold hover:underline">Sign Up</Link>
+            </p>
           </div>
 
           <div className="space-y-2">
