@@ -1,6 +1,3 @@
-// UI, page that fetches invoice details and displays them
-// handles the logic (It handles the logic (fetching data on load) and the visual layout)
-
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { invoiceService } from '../services/api';
@@ -36,11 +33,11 @@ export default function InvoiceDetail() {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || paymentAmount <= 0) return;
-
     setIsSubmitting(true);
     try {
       const updatedInvoice = await invoiceService.addPayment(id, paymentAmount);
-      setInvoice(updatedInvoice);
+      // Ensure we don't set null/undefined state
+      if (updatedInvoice) setInvoice(updatedInvoice);
       setIsModalOpen(false);
       setPaymentAmount(0);
     } catch (err) {
@@ -54,169 +51,217 @@ export default function InvoiceDetail() {
     if (!id || !invoice) return;
     try {
       const updatedInvoice = await invoiceService.toggleArchive(id, !invoice.isArchived);
-      setInvoice(updatedInvoice);
+      // Safety check: if backend fails to return relations, re-fetch the data
+      if (updatedInvoice && updatedInvoice.lineItems) {
+        setInvoice(updatedInvoice);
+      } else {
+        await fetchData();
+      }
     } catch (err) {
       alert("Archive toggle failed: " + err);
     }
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
+      <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
 
   if (!invoice) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="text-center p-8 bg-white shadow-xl rounded-2xl">
-        <h2 className="text-2xl font-bold text-slate-800">Invoice not found</h2>
-        <p className="text-slate-500 mt-2">The record you are looking for doesn't exist.</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] font-sans">
+      <div className="text-center p-12 bg-white rounded-3xl shadow-sm border border-slate-100">
+        <h2 className="text-2xl font-bold text-slate-900">Invoice not found</h2>
+        <p className="text-slate-500 mt-2">The requested ID is missing or invalid.</p>
       </div>
     </div>
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 my-10 relative">
-      
-      {/* Archive Warning Banner */}
-      {invoice.isArchived && (
-        <div className="bg-amber-500 text-white text-center py-2 rounded-t-2xl font-bold text-sm tracking-wider uppercase">
-          This Invoice is Archived
-        </div>
-      )}
-
-      <div className={`bg-white shadow-2xl rounded-2xl overflow-hidden border ${invoice.isArchived ? 'border-amber-200 opacity-90' : 'border-slate-100'}`}>
+    <div className="min-h-screen bg-[#F8F9FB] font-sans text-slate-900 p-4 md:p-10">
+      <div className="max-w-6xl mx-auto">
         
-        {/* Header Section */}
-        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {/* Navigation Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-blue-600">Invoice Detail</span>
-            <h1 className="text-4xl font-black text-slate-900 mt-1">{invoice.invoiceNumber}</h1>
-            <p className="text-slate-500 font-medium mt-1">Client: {invoice.customerName}</p>
+            <div className="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+              <span>Invoices</span>
+              <span>/</span>
+              <span className="text-slate-900">{invoice.invoiceNumber}</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Invoice Details</h1>
           </div>
           
-          <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-            <div className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-tighter ${
-              invoice.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-            }`}>
-              {invoice.status}
-            </div>
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <button 
               onClick={handleToggleArchive}
-              className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${
-                invoice.isArchived 
-                ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100' 
-                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
-              }`}
+              className="flex-1 md:flex-none px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-all"
             >
-              {invoice.isArchived ? 'Restore Invoice' : 'Archive Invoice'}
+              {invoice.isArchived ? 'Restore' : 'Archive'}
             </button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-slate-50/50">
-          <div className="p-8 text-center md:text-left">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Amount</p>
-            <p className="text-3xl font-black text-slate-800 mt-1">${invoice.total.toLocaleString()}</p>
-          </div>
-          <div className="p-8 text-center md:text-left">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Paid</p>
-            <p className="text-3xl font-black text-emerald-600 mt-1">${invoice.amountPaid.toLocaleString()}</p>
-          </div>
-          <div className="p-8 text-center md:text-left bg-blue-50/30">
-            <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">Balance Due</p>
-            <p className="text-3xl font-black text-blue-700 mt-1">${invoice.balanceDue.toLocaleString()}</p>
-          </div>
-        </div>
-
-        {/* Table & Actions */}
-        <div className="p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Line Items</h2>
             <button 
               onClick={() => setIsModalOpen(true)}
               disabled={invoice.balanceDue <= 0 || invoice.isArchived}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
+              className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all shadow-lg shadow-indigo-100"
             >
-              <span>+</span> Record Payment
+              Record Payment
             </button>
           </div>
+        </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-100">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/80 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <th className="px-6 py-4">Description</th>
-                  <th className="px-6 py-4">Qty</th>
-                  <th className="px-6 py-4">Unit Price</th>
-                  <th className="px-6 py-4 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {invoice.lineItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-6 py-4 text-slate-700 font-semibold">{item.description}</td>
-                    <td className="px-6 py-4 text-slate-500">{item.quantity}</td>
-                    <td className="px-6 py-4 text-slate-500">${item.unitPrice.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-right text-slate-900 font-black">${item.lineTotal.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column: Invoice Items */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+              <div className="flex justify-between items-start mb-10">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">Items Summary</h3>
+                  <p className="text-sm text-slate-500 font-medium">Detailed breakdown of charges</p>
+                </div>
+                <div className={`px-4 py-1.5 rounded-full text-xs font-bold ${
+                  invoice.status === 'PAID' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  {invoice.status}
+                </div>
+              </div>
+
+              <div className="overflow-hidden">
+                <table className="w-full text-left border-separate border-spacing-y-4">
+                  <thead>
+                    <tr className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-4">
+                      <th className="pb-2 pl-4">Description</th>
+                      <th className="pb-2">Qty</th>
+                      <th className="pb-2">Price</th>
+                      <th className="pb-2 pr-4 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Fallback to empty array to prevent map errors */}
+                    {(invoice.lineItems || []).map((item) => (
+                      <tr key={item.id} className="group">
+                        <td className="py-5 pl-4 bg-slate-50 rounded-l-2xl group-hover:bg-slate-100 transition-colors">
+                          <span className="font-bold text-slate-800">{item.description}</span>
+                        </td>
+                        <td className="py-5 bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                          <span className="text-slate-500 font-medium">{item.quantity}</span>
+                        </td>
+                        <td className="py-5 bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                          <span className="text-slate-500 font-medium">${item.unitPrice.toLocaleString()}</span>
+                        </td>
+                        <td className="py-5 pr-4 bg-slate-50 rounded-r-2xl text-right group-hover:bg-slate-100 transition-colors">
+                          <span className="font-bold text-slate-900">${item.lineTotal.toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Payment History */}
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 mb-6">Payment Activity</h3>
+              <div className="space-y-4">
+                {/* Fallback to empty array to prevent map errors */}
+                {invoice.payments && invoice.payments.length > 0 ? invoice.payments.map((p) => (
+                  <div key={p.id} className="flex justify-between items-center p-4 rounded-2xl border border-slate-50 hover:border-indigo-100 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">Payment Received</p>
+                        <p className="text-xs text-slate-400 font-medium">{new Date(p.paymentDate).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-emerald-600 text-sm">+ ${p.amount.toLocaleString()}</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-400 font-medium italic">No payments recorded yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Information Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100">
+              <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-6">Financial Summary</p>
+              
+              <div className="space-y-6">
+                <div>
+                  <p className="text-indigo-200 text-sm font-medium mb-1">Total Amount</p>
+                  <p className="text-3xl font-bold">${invoice.total.toLocaleString()}</p>
+                </div>
+                <div className="h-px bg-indigo-500/30"></div>
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-indigo-200 text-sm font-medium mb-1">Paid to date</p>
+                    <p className="text-xl font-bold text-emerald-300">${invoice.amountPaid.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-indigo-200 text-sm font-medium mb-1">Balance Due</p>
+                    <p className="text-xl font-bold text-white">${invoice.balanceDue.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+              <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Customer Details</h4>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-1">Client Name</p>
+                  <p className="text-sm font-bold text-slate-800">{invoice.customerName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-1">Issue Date</p>
+                  <p className="text-sm font-bold text-slate-800">{new Date(invoice.issueDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-1">Due Date</p>
+                  <p className="text-sm font-bold text-slate-800">{new Date(invoice.dueDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* --- PAYMENT MODAL --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Record Payment</h3>
-                <p className="text-slate-500 text-sm mt-1 font-medium">Updating balance for {invoice.invoiceNumber}</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-[2rem] p-10 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Add Payment</h3>
+              <p className="text-slate-500 text-sm font-medium mt-1">Record a manual payment entry.</p>
             </div>
             
-            <form onSubmit={handlePayment}>
-              <div className="mb-8">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Payment Amount ($)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300">$</span>
+            <form onSubmit={handlePayment} className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount to Pay ($)</label>
+                <div className="relative group">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-300 group-focus-within:text-indigo-500 transition-colors">$</span>
                   <input 
-                    type="number" 
-                    step="0.01"
-                    max={invoice.balanceDue}
-                    autoFocus
+                    type="number" step="0.01" max={invoice.balanceDue} autoFocus
                     value={paymentAmount || ''}
                     onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full pl-10 pr-4 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-3xl font-black text-slate-800 focus:border-blue-500 focus:ring-0 outline-none transition-all placeholder:text-slate-200"
-                    placeholder="0.00"
-                    required
+                    className="w-full pl-12 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    placeholder="0.00" required
                   />
                 </div>
-                <div className="flex justify-between mt-3 px-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Max Payable</span>
-                  <span className="text-[10px] font-black text-blue-600 uppercase">${invoice.balanceDue.toLocaleString()}</span>
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
+                  <span className="text-slate-400">Balance Due</span>
+                  <span className="text-indigo-600">${invoice.balanceDue.toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-100 rounded-2xl transition-all"
-                >
-                  Go Back
-                </button>
-                <button 
-                  type="submit"
-                  disabled={isSubmitting || paymentAmount <= 0 || paymentAmount > invoice.balanceDue}
-                  className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-xl shadow-blue-200"
-                >
-                  {isSubmitting ? 'Syncing...' : 'Confirm'}
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all">Cancel</button>
+                <button type="submit" disabled={isSubmitting || paymentAmount <= 0} className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-slate-200 transition-all">
+                  {isSubmitting ? 'Processing...' : 'Confirm'}
                 </button>
               </div>
             </form>

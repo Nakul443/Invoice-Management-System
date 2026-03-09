@@ -64,6 +64,11 @@ export const addPayment = async (req: Request, res: Response): Promise<void> => 
           amountPaid: newPaid,
           balanceDue: newBalance,
           status: newBalance === 0 ? 'PAID' : invoice.status
+        },
+        // Include relations so the frontend doesn't crash on update
+        include: {
+          lineItems: true,
+          payments: true,
         }
       });
     });
@@ -82,7 +87,12 @@ export const toggleArchive = async (req: Request, res: Response): Promise<void> 
 
     const updated = await prisma.invoice.update({
       where: { id: Number(id) },
-      data: { isArchived: Boolean(isArchived) }
+      data: { isArchived: Boolean(isArchived) },
+      // Include relations so the frontend doesn't crash on update
+      include: {
+        lineItems: true,
+        payments: true,
+      }
     });
 
     res.json(updated);
