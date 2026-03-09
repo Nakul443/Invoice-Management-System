@@ -7,9 +7,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // 1. Get Invoice Details
-export const getInvoiceById = async (req: Request, res: Response): Promise<void> => {
+export const getInvoiceById = async (req: any, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const loggedInUserId = req.user.userId; // This comes from our authenticateToken middleware
+
     const invoice = await prisma.invoice.findUnique({
       where: { id: Number(id) },
       include: {
@@ -18,10 +20,12 @@ export const getInvoiceById = async (req: Request, res: Response): Promise<void>
       },
     });
 
-    if (!invoice) {
-      res.status(404).json({ message: 'Invoice not found' });
+    // CHECK: Does invoice exist AND does it belong to the current user?
+    if (!invoice || invoice.userId !== loggedInUserId) {
+      res.status(404).json({ message: 'Invoice not found or access denied' });
       return;
     }
+
     res.json(invoice);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
