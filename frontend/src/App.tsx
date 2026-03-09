@@ -47,13 +47,23 @@ function App() {
         />
 
         {/* 4. Dashboard (Protected) */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
-          } 
+          }
+        />
+
+        {/* 5. Invoice Detail (Protected) */}
+        <Route
+          path="/invoice/:id"
+          element={
+            <PrivateRoute>
+              <InvoiceDetail />
+            </PrivateRoute>
+          }
         />
 
         {/* ... other routes */}

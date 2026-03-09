@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { invoiceService } from '../services/api';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('');
   const navigate = useNavigate();
 
+  // Modal & Form State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
-    // Get the name we saved during login/register
     const storedName = localStorage.getItem('userName');
     setUserName(storedName || 'User');
   }, []);
@@ -14,6 +20,27 @@ export default function Dashboard() {
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
+  };
+
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      // Assuming invoiceService.createInvoice is defined in your api.ts
+      const newInvoice = await invoiceService.createInvoice({
+        customerName,
+        dueDate,
+        status: 'DRAFT',
+      });
+      
+      setIsModalOpen(false);
+      // Navigate to the newly created invoice to add items
+      navigate(`/invoice/${newInvoice.id}`);
+    } catch (err) {
+      alert("Failed to create invoice. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -62,7 +89,10 @@ export default function Dashboard() {
               >
                 View Latest Invoice
               </button>
-              <button className="w-full py-3 bg-indigo-500 rounded-2xl font-bold text-sm hover:bg-indigo-400 transition-all">
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg"
+              >
                 + Create New Invoice
               </button>
             </div>
@@ -81,8 +111,59 @@ export default function Dashboard() {
             Once you start creating and managing invoices, your activity feed will appear here.
           </p>
         </div>
-
       </div>
+
+      {/* --- CREATE INVOICE MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight">New Invoice</h3>
+              <p className="text-slate-500 text-sm font-medium mt-1">Fill in the details to generate a new invoice draft.</p>
+            </div>
+            
+            <form onSubmit={handleCreateInvoice} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Client Name</label>
+                <input 
+                  type="text" required
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
+                  placeholder="e.g. Apple Inc"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Due Date</label>
+                <input 
+                  type="date" required
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting || !customerName || !dueDate}
+                  className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-slate-200 transition-all shadow-lg shadow-indigo-100"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Invoice'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

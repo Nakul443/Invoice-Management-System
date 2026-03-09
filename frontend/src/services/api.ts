@@ -4,16 +4,16 @@
 // if the backend URL changes, we only need to change it here, not in every component that calls the backend
 // by using api.interceptors, we don't have to manually add headers (like auth token) to every request/function, it will be added automatically to all requests
 
-import type { Invoice } from '../types/invoice.js';
+import type { Invoice } from "../types/invoice.js";
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Helper to get the token and build headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 
@@ -21,22 +21,22 @@ const getAuthHeaders = () => {
 export const authService = {
   login: async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) throw new Error('Invalid credentials');
+    if (!response.ok) throw new Error("Invalid credentials");
     return response.json();
   },
   register: async (email: string, password: string, name: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, name }),
     });
-    if (!response.ok) throw new Error('Registration failed');
+    if (!response.ok) throw new Error("Registration failed");
     return response.json();
-  }
+  },
 };
 
 export const invoiceService = {
@@ -45,29 +45,55 @@ export const invoiceService = {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
       headers: getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch invoice');
+    if (!response.ok) throw new Error("Failed to fetch invoice");
     return response.json();
   },
 
   // 2. Add Payment
   addPayment: async (id: string | number, amount: number): Promise<Invoice> => {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/payments`, {
-      method: 'POST',
+      method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ amount }),
     });
-    if (!response.ok) throw new Error('Payment failed');
+    if (!response.ok) throw new Error("Payment failed");
+    return response.json();
+  },
+
+  createInvoice: async (invoiceData: Partial<Invoice>): Promise<Invoice> => {
+    const response = await fetch(`${API_BASE_URL}/invoices`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(invoiceData),
+    });
+    if (!response.ok) throw new Error("Failed to create invoice");
+    return response.json();
+  },
+
+  createLineItem: async (invoiceId: number, itemData: any) => {
+    const response = await fetch(
+      `${API_BASE_URL}/invoices/${invoiceId}/items`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(itemData),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to create line item");
     return response.json();
   },
 
   // 3 & 4. Archive/Restore
-  toggleArchive: async (id: string | number, isArchived: boolean): Promise<Invoice> => {
+  toggleArchive: async (
+    id: string | number,
+    isArchived: boolean,
+  ): Promise<Invoice> => {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/archive`, {
-      method: 'POST',
+      method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ isArchived }),
     });
-    if (!response.ok) throw new Error('Archive toggle failed');
+    if (!response.ok) throw new Error("Archive toggle failed");
     return response.json();
-  }
+  },
 };

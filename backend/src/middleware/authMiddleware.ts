@@ -6,6 +6,8 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default';
 
@@ -31,4 +33,41 @@ export const authenticateToken = (req: any, res: Response, next: NextFunction) =
     req.user = decoded;
     next();
   });
+};
+
+export const createInvoice = async (req: any, res: any) => {
+  try {
+    const { customerName, dueDate } = req.body;
+    
+    // CHANGE THIS: Match the property name used in getInvoiceById
+    const userId = req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: No user ID found" });
+    }
+
+    const invoiceNumber = `INV-${Date.now()}`;
+
+    const newInvoice = await prisma.invoice.create({
+      data: {
+        invoiceNumber,
+        customerName,
+        dueDate: new Date(dueDate),
+        issueDate: new Date(),
+        status: "DRAFT",
+        userId: userId, // Now this will be a valid number
+      },
+      // IMPORTANT: Include these so the frontend frontend state 
+      // stays consistent with your interface
+      include: {
+        lineItems: true,
+        payments: true,
+      }
+    });
+
+    res.status(201).json(newInvoice);
+  } catch (error) {
+    console.error("Create Invoice Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 };
