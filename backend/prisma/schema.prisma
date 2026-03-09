@@ -10,9 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id       Int       @id @default(autoincrement())
+  email    String    @unique
+  password String
+  name     String
+  invoices Invoice[] // A user can have many invoices
+}
+
 model Invoice {
   id            Int           @id @default(autoincrement())
-  invoiceNumber String       
+  invoiceNumber String        @unique
   customerName  String       
   issueDate     DateTime     
   dueDate       DateTime     
@@ -23,6 +31,8 @@ model Invoice {
   isArchived    Boolean       @default(false)
   lineItems     InvoiceLine[]
   payments      Payment[]
+  userId        Int?
+  user          User?          @relation(fields: [userId], references: id)
 }
 
 model InvoiceLine {
