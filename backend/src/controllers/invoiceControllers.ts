@@ -37,13 +37,12 @@ export const getInvoiceById = async (req: any, res: Response): Promise<void> => 
   }
 };
 
-// backend/controllers/invoiceControllers.ts
 export const getInvoices = async (req: any, res: any) => {
   try {
-    const userId = req.user.userId; // Extracted by your fixed middleware
+    const userId = getUserId(req); // Use the helper for consistency
     const invoices = await prisma.invoice.findMany({
       where: { userId: userId },
-      orderBy: { id: 'desc' }
+      orderBy: { id: 'desc' } // Shows newest first
     });
     res.json(invoices);
   } catch (error) {
@@ -54,40 +53,27 @@ export const getInvoices = async (req: any, res: any) => {
 // 2. Create New Invoice
 export const createInvoice = async (req: any, res: any) => {
   try {
-    const { customerName, dueDate } = req.body;
-
-    const userId = req.user.userId; 
-
-    if (!userId) {
-      console.error("Auth Error: No userId found in req.user");
-      return res.status(401).json({ message: "Unauthorized: User ID missing" });
-    }
-
-    const invoiceNumber = `INV-${Date.now()}`;
+    const { customerName, dueDate, currency } = req.body;
+    const userId = getUserId(req);
 
     const newInvoice = await prisma.invoice.create({
       data: {
-        invoiceNumber,
+        invoiceNumber: `INV-${Date.now()}`,
         customerName,
+        issueDate: new Date(), // Add this to match your new schema
         dueDate: new Date(dueDate),
-        issueDate: new Date(),
+        userId,
+        currency: currency || "INR",
         status: "DRAFT",
-        userId: userId, // This matches your "userId": 1 from the payload
         total: 0,
         balanceDue: 0,
         amountPaid: 0,
-        taxRate: 0.1,
-      },
-      include: {
-        lineItems: true,
-        payments: true,
       }
     });
-
     res.status(201).json(newInvoice);
   } catch (error) {
-    console.error("Prisma Create Error:", error);
-    res.status(500).json({ message: "Failed to create invoice in database" });
+    console.error(error);
+    res.status(500).json({ message: "Failed to create invoice" });
   }
 };
 

@@ -22,7 +22,8 @@ model Invoice {
   id            Int           @id @default(autoincrement())
   invoiceNumber String        @unique
   customerName  String       
-  issueDate     DateTime     
+  issueDate     DateTime
+  currency      String        @default("INR")
   dueDate       DateTime
   status        Status        @default(DRAFT)
   total         Float         @default(0)

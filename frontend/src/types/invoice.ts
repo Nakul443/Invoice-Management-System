@@ -27,6 +27,7 @@ export interface Invoice {
   status: Status;      // 'DRAFT' | 'PAID'
   total: number;
   amountPaid: number;
+  currency: string;
   balanceDue: number;
   isArchived: boolean;
   taxRate: number;     // Matches Float @default(0.10)
