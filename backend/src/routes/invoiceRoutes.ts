@@ -3,9 +3,11 @@ import {
   getInvoiceById, 
   addPayment, 
   toggleArchive, 
-  createLineItem
+  createLineItem,
+  updateInvoiceTax,
+  createInvoice
 } from '../controllers/invoiceControllers.js'; // Match your filename 'invoiceControllers.ts'
-import { authenticateToken, createInvoice } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -17,6 +19,8 @@ router.post('/', authenticateToken, createInvoice);
 
 // 2. Add Payment
 router.post('/:id/payments', authenticateToken, addPayment);
+
+router.patch('/:id/tax', authenticateToken, updateInvoiceTax);
 
 router.post('/:id/items', authenticateToken, createLineItem);
 

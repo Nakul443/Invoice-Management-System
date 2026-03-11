@@ -83,6 +83,15 @@ export const invoiceService = {
     return response.json();
   },
 
+  updateTax: async (id: string, taxRate: number) => {
+    const response = await fetch(`${API_BASE_URL}/invoices/${id}/tax`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ taxRate }),
+    });
+    return response.json();
+  },
+
   // 3 & 4. Archive/Restore
   toggleArchive: async (
     id: string | number,

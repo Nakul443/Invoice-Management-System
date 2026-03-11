@@ -18,56 +18,18 @@ export const authenticateToken = (req: any, res: Response, next: NextFunction) =
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  // 2. If there is no token, deny access
   if (!token) {
     return res.status(401).json({ error: "Access denied. No token provided." });
   }
 
-  // 3. Verify the token
+  // verify token
   jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
     if (err) {
+      console.log("JWT Verification Error:", err.message); // This will tell you if it's "invalid signature" or "expired"
       return res.status(403).json({ error: "Invalid or expired token." });
     }
 
-    // 4. Attach the user info to the request so controllers can use it
-    req.user = decoded;
+    req.user = decoded; // Attach user info to request
     next();
   });
-};
-
-export const createInvoice = async (req: any, res: any) => {
-  try {
-    const { customerName, dueDate } = req.body;
-    
-    // CHANGE THIS: Match the property name used in getInvoiceById
-    const userId = req.user.userId; 
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized: No user ID found" });
-    }
-
-    const invoiceNumber = `INV-${Date.now()}`;
-
-    const newInvoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        customerName,
-        dueDate: new Date(dueDate),
-        issueDate: new Date(),
-        status: "DRAFT",
-        userId: userId, // Now this will be a valid number
-      },
-      // IMPORTANT: Include these so the frontend frontend state 
-      // stays consistent with your interface
-      include: {
-        lineItems: true,
-        payments: true,
-      }
-    });
-
-    res.status(201).json(newInvoice);
-  } catch (error) {
-    console.error("Create Invoice Error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
 };

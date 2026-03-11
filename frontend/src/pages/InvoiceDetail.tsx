@@ -89,6 +89,17 @@ export default function InvoiceDetail() {
     }
   };
 
+  const handleTaxChange = async (newRatePercentage: number) => {
+    if (!id) return;
+    const decimalRate = newRatePercentage / 100;
+    try {
+      const updated = await invoiceService.updateTax(id, decimalRate);
+      setInvoice(updated);
+    } catch (err) {
+      alert("Could not update tax rate");
+    }
+  };
+
   // --- TAX & TOTAL CALCULATIONS ---
   const subtotal = invoice
     ? (invoice.lineItems || []).reduce((acc, item) => acc + item.lineTotal, 0)
@@ -153,19 +164,16 @@ export default function InvoiceDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-              <div className="flex justify-between items-start mb-10">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">Items Summary</h3>
-                  <p className="text-sm text-slate-500 font-medium">Detailed breakdown of charges</p>
-                </div>
-                <div
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold ${
-                    balanceDue <= 0 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
-                  }`}
-                >
-                  {balanceDue <= 0 ? "PAID" : "PENDING"}
-                </div>
-              </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-indigo-200">Tax (%)</span>
+              <input
+                type="number"
+                className="w-16 bg-indigo-500/30 border border-indigo-400 rounded px-2 py-0.5 text-right font-bold outline-none focus:bg-indigo-500"
+                value={(invoice?.taxRate || 0) * 100}
+                onChange={(e) => handleTaxChange(Number(e.target.value))}
+                onBlur={(e) => handleTaxChange(Number(e.target.value))} // Save on blur
+              />
+            </div>
 
               <div className="overflow-hidden">
                 <table className="w-full text-left border-separate border-spacing-y-4">
