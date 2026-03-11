@@ -4,6 +4,8 @@ import { invoiceService } from '../services/api';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('');
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   // Modal & Form State
@@ -12,9 +14,22 @@ export default function Dashboard() {
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 1. Load User and Fetch Invoices
   useEffect(() => {
     const storedName = localStorage.getItem('userName');
     setUserName(storedName || 'User');
+
+    const fetchInvoices = async () => {
+      try {
+        const data = await invoiceService.getInvoices();
+        setInvoices(data);
+      } catch (err) {
+        console.error("Failed to fetch invoices", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInvoices();
   }, []);
 
   const handleLogout = () => {
@@ -26,15 +41,11 @@ export default function Dashboard() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Assuming invoiceService.createInvoice is defined in your api.ts
       const newInvoice = await invoiceService.createInvoice({
         customerName,
         dueDate,
-        status: 'DRAFT',
       });
-      
       setIsModalOpen(false);
-      // Navigate to the newly created invoice to add items
       navigate(`/invoice/${newInvoice.id}`);
     } catch (err) {
       alert("Failed to create invoice. Please try again.");
@@ -42,6 +53,23 @@ export default function Dashboard() {
       setIsSubmitting(false);
     }
   };
+
+  // 2. Overdue Logic Styles
+  const getStatusStyles = (invoice: any) => {
+    if (invoice.status === 'PAID') return "bg-emerald-100 text-emerald-700";
+    const isOverdue = new Date(invoice.dueDate) < new Date();
+    if (isOverdue) return "bg-rose-100 text-rose-700";
+    return "bg-slate-100 text-slate-700";
+  };
+
+  // 3. Stats Calculations
+  const totalRevenue = invoices
+    .filter(inv => inv.status === 'PAID')
+    .reduce((sum, inv) => sum + (inv.total || 0), 0);
+  
+  const pendingBalance = invoices
+    .filter(inv => inv.status !== 'PAID')
+    .reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] font-sans text-slate-900 p-4 md:p-10">
@@ -67,49 +95,77 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Revenue</p>
-            <p className="text-3xl font-bold">₹1,24,500</p>
-            <div className="mt-4 flex items-center text-emerald-600 text-xs font-bold">
-              <span className="bg-emerald-50 px-2 py-1 rounded-lg">↑ 12% from last month</span>
-            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Collected</p>
+            <p className="text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
           </div>
 
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pending Balance</p>
-            <p className="text-3xl font-bold text-amber-600">₹42,000</p>
-            <p className="mt-4 text-slate-400 text-xs font-medium">8 invoices awaiting payment</p>
+            <p className="text-3xl font-bold text-amber-600">₹{pendingBalance.toLocaleString()}</p>
+            <p className="mt-4 text-slate-400 text-xs font-medium">
+              {invoices.filter(i => i.status !== 'PAID').length} invoices awaiting payment
+            </p>
           </div>
 
           <div className="bg-indigo-600 p-8 rounded-[2.5rem] shadow-xl shadow-indigo-100 text-white">
-            <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Quick Actions</p>
-            <div className="space-y-3 mt-4">
-              <button 
-                onClick={() => navigate('/invoice/1')}
-                className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-sm transition-all"
-              >
-                View Latest Invoice
-              </button>
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg"
-              >
-                + Create New Invoice
-              </button>
-            </div>
+            <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Actions</p>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="w-full mt-4 py-4 bg-white text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg"
+            >
+              + Create New Invoice
+            </button>
           </div>
         </div>
 
-        {/* Placeholder for Recent Activity */}
-        <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 text-center py-20">
-          <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        {/* Invoice Table Section */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+            <h3 className="text-xl font-bold text-slate-900">Recent Invoices</h3>
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">No recent activity</h3>
-          <p className="text-slate-500 font-medium max-w-xs mx-auto">
-            Once you start creating and managing invoices, your activity feed will appear here.
-          </p>
+          
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="p-20 text-center text-slate-400">Loading invoices...</div>
+            ) : invoices.length > 0 ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    <th className="px-8 py-4">Client</th>
+                    <th className="px-8 py-4">Status</th>
+                    <th className="px-8 py-4">Due Date</th>
+                    <th className="px-8 py-4 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {invoices.map((inv) => (
+                    <tr 
+                      key={inv.id} 
+                      onClick={() => navigate(`/invoice/${inv.id}`)}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                    >
+                      <td className="px-8 py-5 font-bold text-slate-700">{inv.customerName}</td>
+                      <td className="px-8 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyles(inv)}`}>
+                          {inv.status === 'PAID' ? 'Paid' : (new Date(inv.dueDate) < new Date() ? 'Overdue' : 'Draft')}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-sm font-medium text-slate-500">
+                        {new Date(inv.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-8 py-5 text-right font-bold text-slate-900">
+                        ₹{inv.total?.toLocaleString() || 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-20 text-center">
+                <p className="text-slate-400 font-medium">No invoices found. Create your first one!</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -119,7 +175,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-slate-900 tracking-tight">New Invoice</h3>
-              <p className="text-slate-500 text-sm font-medium mt-1">Fill in the details to generate a new invoice draft.</p>
+              <p className="text-slate-500 text-sm font-medium mt-1">Set up a new client billing cycle.</p>
             </div>
             
             <form onSubmit={handleCreateInvoice} className="space-y-6">
@@ -129,8 +185,8 @@ export default function Dashboard() {
                   type="text" required
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
-                  placeholder="e.g. Apple Inc"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 outline-none transition-all font-medium"
+                  placeholder="e.g. Acme Corp"
                 />
               </div>
 
@@ -140,7 +196,7 @@ export default function Dashboard() {
                   type="date" required
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-500 outline-none transition-all font-medium"
                 />
               </div>
 
@@ -155,7 +211,7 @@ export default function Dashboard() {
                 <button 
                   type="submit" 
                   disabled={isSubmitting || !customerName || !dueDate}
-                  className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-slate-200 transition-all shadow-lg shadow-indigo-100"
+                  className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-slate-200 transition-all shadow-lg"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Invoice'}
                 </button>

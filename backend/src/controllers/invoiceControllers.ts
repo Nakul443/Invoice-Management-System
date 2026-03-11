@@ -37,6 +37,20 @@ export const getInvoiceById = async (req: any, res: Response): Promise<void> => 
   }
 };
 
+// backend/controllers/invoiceControllers.ts
+export const getInvoices = async (req: any, res: any) => {
+  try {
+    const userId = req.user.userId; // Extracted by your fixed middleware
+    const invoices = await prisma.invoice.findMany({
+      where: { userId: userId },
+      orderBy: { id: 'desc' }
+    });
+    res.json(invoices);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch invoices" });
+  }
+};
+
 // 2. Create New Invoice
 export const createInvoice = async (req: any, res: any) => {
   try {

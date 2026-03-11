@@ -40,6 +40,14 @@ export const authService = {
 };
 
 export const invoiceService = {
+  getInvoices: async (): Promise<Invoice[]> => {
+    const response = await fetch(`${API_BASE_URL}/invoices`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Failed to fetch invoices");
+    return response.json();
+  },
+
   // 1. Get Invoice Details
   getInvoice: async (id: string | number): Promise<Invoice> => {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
