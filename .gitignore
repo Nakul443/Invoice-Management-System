@@ -25,3 +25,11 @@ dist-ssr
 *.sln
 *.sw?
 *.code-workspace
+
+# Local environment variables
+.env
+.env.local
+.env.*.local
+
+# Prisma-specific
+/backend/prisma/migrations
